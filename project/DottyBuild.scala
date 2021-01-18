@@ -4,9 +4,6 @@ import Keys._
 import com.typesafe.tools.mima.plugin.MimaKeys.{mimaPreviousArtifacts, mimaCurrentClassfiles, mimaBinaryIssueFilters}
 import com.typesafe.tools.mima.core._
 import com.typesafe.tools.mima.core.ProblemFilters._
-import com.typesafe.sbt.osgi.OsgiKeys
-import com.typesafe.sbt.osgi.SbtOsgi
-import com.typesafe.sbt.osgi.SbtOsgi.autoImport._
 
 trait DottyBuild { this: BuildCommons =>
 
@@ -30,7 +27,6 @@ trait DottyBuild { this: BuildCommons =>
     }
 
   lazy val scalacticDotty = project.in(file("dotty/scalactic"))
-    .enablePlugins(SbtOsgi)
     .settings(sharedSettings: _*)
     .settings(dottySettings: _*)
     .settings(scalacticDocSettings: _*)
@@ -63,31 +59,9 @@ trait DottyBuild { this: BuildCommons =>
       publishArtifact in (Compile, packageDoc) := false, // Temporary disable publishing of doc, can't get it to build.
       mimaPreviousArtifacts := Set(organization.value %% name.value % previousReleaseVersion),
       mimaCurrentClassfiles := (classDirectory in Compile).value.getParentFile / (name.value + "_" + scalaBinaryVersion.value + "-" + releaseVersion + ".jar")
-    ).settings(osgiSettings: _*).settings(
-    OsgiKeys.exportPackage := Seq(
-      "org.scalactic",
-      "org.scalactic.anyvals",
-      "org.scalactic.exceptions",
-      "org.scalactic.source"
-    ),
-    OsgiKeys.importPackage := Seq(
-      "org.scalatest.*",
-      "org.scalactic.*",
-      "scala.util.parsing.*;version=\"$<range;[==,=+);$<replace;1.0.4;-;.>>\"",
-      "scala.xml.*;version=\"$<range;[==,=+);$<replace;1.0.4;-;.>>\"",
-      "scala.*;version=\"$<range;[==,=+);$<replace;"+scalaBinaryVersion.value+";-;.>>\"",
-      "*;resolution:=optional"
-    ),
-    OsgiKeys.additionalHeaders:= Map(
-      "Bundle-Name" -> "Scalactic",
-      "Bundle-Description" -> "Scalactic is an open-source library for Scala projects.",
-      "Bundle-DocURL" -> "http://www.scalactic.org/",
-      "Bundle-Vendor" -> "Artima, Inc."
     )
-  )
 
   lazy val scalatestCoreDotty = project.in(file("dotty/core"))
-    .enablePlugins(SbtOsgi)
     .settings(sharedSettings: _*)
     .settings(dottySettings: _*)
     .settings(
@@ -130,42 +104,11 @@ trait DottyBuild { this: BuildCommons =>
           exclude[MissingClassProblem]("org.scalatest.tools.SbtCommandParser")
         )
       }
-    ).settings(osgiSettings: _*).settings(
-    OsgiKeys.exportPackage := Seq(
-      "org.scalatest", 
-        "org.scalatest.concurrent",  
-        "org.scalatest.enablers",  
-        "org.scalatest.exceptions",  
-        "org.scalatest.events", 
-        "org.scalatest.fixture",  
-        "org.scalatest.prop", 
-        "org.scalatest.tags", 
-        "org.scalatest.tagobjects", 
-        "org.scalatest.time", 
-        "org.scalatest.tools",  
-        "org.scalatest.verbs"
-    ),
-    OsgiKeys.importPackage := Seq(
-      "org.scalatest.*",
-      "org.scalactic.*",
-      "scala.util.parsing.*;version=\"$<range;[==,=+);$<replace;1.0.4;-;.>>\"",
-      "scala.xml.*;version=\"$<range;[==,=+);$<replace;1.0.4;-;.>>\"",
-      "scala.*;version=\"$<range;[==,=+);$<replace;"+scalaBinaryVersion.value+";-;.>>\"",
-      "*;resolution:=optional"
-    ),
-    OsgiKeys.additionalHeaders:= Map(
-      "Bundle-Name" -> "ScalaTest Core Dotty",
-      "Bundle-Description" -> "ScalaTest is an open-source test framework for the Javascript Platform designed to increase your productivity by letting you write fewer lines of test code that more clearly reveal your intent.",
-      "Bundle-DocURL" -> "http://www.scalatest.org/",
-      "Bundle-Vendor" -> "Artima, Inc.",
-      "Main-Class" -> "org.scalatest.tools.Runner"
-    )
-  ).dependsOn(scalacticDotty, scalatestCompatible)
+    ).dependsOn(scalacticDotty, scalatestCompatible)
 
   private implicit class DottyProjectEx(private val p: Project) {
     /** common settings for all scalatest modules */
     def scalatestModule(name: String, title: String): Project = p
-      .enablePlugins(SbtOsgi)
       .settings(sharedSettings: _*)
       .settings(dottySettings: _*)
       .settings(
@@ -174,13 +117,6 @@ trait DottyBuild { this: BuildCommons =>
         moduleName := name,
         packageManagedSources,
         publishArtifact in (Compile, packageDoc) := false, // Temporary disable publishing of doc, can't get it to build.
-        osgiSettings,
-        OsgiKeys.additionalHeaders := Map(
-          "Bundle-Name" -> title,
-          "Bundle-Description" -> "ScalaTest is an open-source test framework for the Javascript Platform designed to increase your productivity by letting you write fewer lines of test code that more clearly reveal your intent.",
-          "Bundle-DocURL" -> "http://www.scalatest.org/",
-          "Bundle-Vendor" -> "Artima, Inc."
-        ),
       )
 
     /** common settings for all scalatest sub modules (all modules, except the `scalatest` module) */
@@ -189,18 +125,12 @@ trait DottyBuild { this: BuildCommons =>
         sourceGenerators in Compile += Def.task {
           gen((sourceManaged in Compile).value, version.value, scalaVersion.value)
         }.taskValue,
-        OsgiKeys.importPackage := Seq(
-          "org.scalatest.*",
-          "*;resolution:=optional"
-        ),
       )
 
     /** common settings for all scalatest `style` modules such as `featurespec`, `funsuite`,.. */
     def scalatestStyleModule(style: String, title: String): Project =
       scalatestSubModule(s"scalatest-$style", title, GenModulesDotty(style))
-        .settings(
-          OsgiKeys.exportPackage := Seq(s"org.scalatest.$style"),
-        ).dependsOn(scalatestCoreDotty)
+        .dependsOn(scalatestCoreDotty)
   }
   
   lazy val scalatestFeatureSpecDotty = project.in(file("dotty/featurespec"))
@@ -238,11 +168,6 @@ trait DottyBuild { this: BuildCommons =>
         GenModulesDotty.genScalaTestMatchersCore(targetDir, version, scalaVersion) ++
           GenFactoriesDotty.genMain(targetDir / "org" / "scalatest" / "matchers" / "dsl", version, scalaVersion)
       }
-    ).settings(
-      OsgiKeys.exportPackage := Seq(
-        "org.scalatest.matchers",
-        "org.scalatest.matchers.dsl"
-      ),
     ).dependsOn(scalatestCoreDotty)
 
   lazy val scalatestShouldMatchersDotty = project.in(file("dotty/shouldmatchers"))
@@ -250,8 +175,6 @@ trait DottyBuild { this: BuildCommons =>
       "scalatest-shouldmatchers",
       "ScalaTest Should Matchers Dotty",
       GenModulesDotty.genScalaTestShouldMatchers
-    ).settings(
-      OsgiKeys.exportPackage := Seq("org.scalatest.matchers.should"),
     ).dependsOn(scalatestMatchersCoreDotty)
 
   lazy val scalatestMustMatchersDotty = project.in(file("dotty/mustmatchers"))
@@ -260,9 +183,7 @@ trait DottyBuild { this: BuildCommons =>
       "ScalaTest Must Matchers Dotty",
       (targetDir, version, scalaVersion) =>
         GenMatchers.genMainForDotty(targetDir / "org" / "scalatest", version, scalaVersion)
-    ).settings(
-    OsgiKeys.exportPackage := Seq("org.scalatest.matchers.must"),
-  ).dependsOn(scalatestMatchersCoreDotty)
+    ).dependsOn(scalatestMatchersCoreDotty)
 
   lazy val scalatestModulesDotty = project.in(file("modules/dotty/modules-aggregation"))
     .settings(sharedSettings: _*)
@@ -293,7 +214,6 @@ trait DottyBuild { this: BuildCommons =>
         (crossTarget.value / "classes").mkdirs()
         Seq.empty[File]
       }.taskValue,
-      OsgiKeys.privatePackage := Seq.empty, 
     ).dependsOn(
       scalatestCoreDotty, 
       scalatestFeatureSpecDotty, 
